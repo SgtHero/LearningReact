@@ -9,21 +9,52 @@ var createBrowserHistory = require('history/lib/createBrowserHistory');
 
 var h = require('./helpers');
 
+// Firebase
+
+var Rebase = require('re-base');
+var base = Rebase.createClass('https://reacttutorialwesbos.firebaseio.com/');
+
+var Catalyst = require('react-catalyst');
+
 var App = React.createClass({
+    mixins: [Catalyst.LinkedStateMixin],
     getInitialState: function () {
         return {
             fishes: {},
             order: {}
         }
     },
+    componentDidMount: function () {
+        base.syncState(this.props.params.storeId + '/fishes', {
+            context: this,
+            state: 'fishes'
+        });
+
+        var localStorageRef = localStorage.getItem('order-' + this.props.params.storeId);
+
+        if (localStorageRef) {
+            this.setState({
+                order: JSON.parse(localStorageRef),
+            });
+        }
+    },
+    componentWillUpdate: function (nextProps, nextState) {
+        localStorage.setItem('order-' + this.props.params.storeId, JSON.stringify(nextState.order));
+    },
     addToOrder: function (key) {
         this.state.order[key] = this.state.order[key] + 1 || 1;
-        this.setState({ order:this.state.order});
+        this.setState({order: this.state.order});
     },
     addFish: function (fish) {
         var timeStamp = (new Date()).getTime();
         this.state.fishes['fish-' + timeStamp] = fish;
-        this.setState({fishes : this.state.fishes});
+        this.setState({fishes: this.state.fishes});
+    },
+    removeFish: function (key) {
+        this.state.fishes[key] = null;
+        this.setState({
+            fishes: this.state.fishes
+        })
     },
     loadSamples: function () {
         this.setState({
@@ -37,13 +68,14 @@ var App = React.createClass({
         return (
             <div className="catch-of-the-day">
                 <div className="menu">
-                    <Header tagline="Fresh Seafood Market" />
+                    <Header tagline="Fresh Seafood Market"/>
                     <ul className="list-of-fishes">
                         {Object.keys(this.state.fishes).map(this.renderFish)}
                     </ul>
                 </div>
                 <Order fishes={this.state.fishes} order={this.state.order}/>
-                <Inventory addFish={this.addFish} loadSamples={this.loadSamples} />
+                <Inventory addFish={this.addFish} loadSamples={this.loadSamples} fishes={this.state.fishes}
+                           linkState={this.linkState}/>
             </div>
         )
     }
@@ -124,10 +156,10 @@ var Order = React.createClass({
         var fish = this.props.fishes[key];
         var count = this.props.order[key];
 
-        if(!fish) {
+        if (!fish) {
             return <li key={key}>Sorry, no more fish in stock</li>
         }
-            return (
+        return (
             <li>
                 <span>{count}</span>lbs
                 {fish.name}
@@ -142,8 +174,8 @@ var Order = React.createClass({
             var count = this.props.order[key];
             var isAvailable = fish && fish.status === 'available';
 
-            if(fish && isAvailable) {
-                return prevTotal + (count * parseInt(fish.price)|| 0 );
+            if (fish && isAvailable) {
+                return prevTotal + (count * parseInt(fish.price) || 0 );
             }
 
             return prevTotal;
@@ -164,10 +196,27 @@ var Order = React.createClass({
 });
 
 var Inventory = React.createClass({
+    renderInventory: function (key) {
+        var linkState = this.props.linkState;
+        return (
+            <div className="fish-edit" key={key}>
+                <input type="text" valueLink={linkState('fishes.'+ key +'.name')}/>
+                <input type="text" valueLink={linkState('fishes.'+ key +'.price')}/>
+                <select valueLink={linkState('fishes.' + key + '.status')}>
+                    <option value="nicht verfügbar">Ausverkauft</option>
+                    <option value="verfügbar">Frischer Fisch!</option>
+                </select>
+                <textarea valueLink={linkState('fishes.' + key + '.desc')}></textarea>
+                <input type="text" valueLink={linkState('fishes.' + key + '.image')}/>
+                <button>Remove Fish</button>
+            </div>
+        )
+    },
     render: function () {
         return (
             <div>
                 <h2>Inventory</h2>
+                {Object.keys(this.props.fishes).map(this.renderInventory)}
                 <AddFishForm {...this.props}></AddFishForm>
                 <button onClick={this.props.loadSamples}>Load Sampledata</button>
             </div>
@@ -182,7 +231,7 @@ var StorePicker = React.createClass({
         var storeId = this.refs.storeId.value;
         this.history.pushState(null, '/store/' + storeId);
     },
-    render: function() {
+    render: function () {
         return (
             <form className="store-selector" onSubmit={this.goToStore}>
                 <h2>Enter a Store</h2>
@@ -207,6 +256,6 @@ var routes = (
         <Route path="/store/:storeId" component={App}></Route>
         <Route path="*" component={NotFound}></Route>
     </Router>
-)
+);
 
 ReactDOM.render(routes, document.querySelector('#main'));
