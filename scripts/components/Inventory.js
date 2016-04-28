@@ -3,12 +3,12 @@
  */
 
 import React from 'react';
-
+import autobind from 'autobind-decorator';
 import AddFishForm from './AddFishForm';
 
-
-var Inventory = React.createClass({
-    renderInventory: function (key) {
+@autobind
+class Inventory extends React.Component {
+    renderInventory(key) {
         var linkState = this.props.linkState;
         return (
             <div className="fish-edit" key={key}>
@@ -23,8 +23,9 @@ var Inventory = React.createClass({
                 <button onClick={this.props.removeFish.bind(null, key)}>Remove Fish</button>
             </div>
         )
-    },
-    render: function () {
+    }
+
+    render() {
         return (
             <div>
                 <h2>Inventory</h2>
@@ -33,14 +34,15 @@ var Inventory = React.createClass({
                 <button onClick={this.props.loadSamples}>Load Sampledata</button>
             </div>
         )
-    },
-    propTypes: {
-        linkState: React.PropTypes.func.isRequired,
-        addFish: React.PropTypes.func.isRequired,
-        removeFish: React.PropTypes.func.isRequired,
-        fishes: React.PropTypes.object.isRequired,
-        loadSamples: React.PropTypes.func.isRequired
     }
-});
+}
+
+Inventory.propTypes = {
+    linkState: React.PropTypes.func.isRequired,
+    addFish: React.PropTypes.func.isRequired,
+    removeFish: React.PropTypes.func.isRequired,
+    fishes: React.PropTypes.object.isRequired,
+    loadSamples: React.PropTypes.func.isRequired
+}
 
 export default Inventory;
